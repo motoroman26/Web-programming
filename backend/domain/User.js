@@ -4,6 +4,14 @@ class User {
     this.name = name;
     this.email = email;
   }
+
+  changeEmail(newEmail) {
+    this.email = newEmail;
+  }
+
+  rename(newName) {
+    this.name = newName;
+  }
 }
 
 module.exports = User;
