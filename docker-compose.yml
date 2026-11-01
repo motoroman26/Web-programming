@@ -1,24 +1,44 @@
 services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: docuflow-web:1.0.0
+    container_name: web
+    ports:
+      - "3000:80"
+    environment:
+      API_BASE_URL: "http://localhost:8080"
+    depends_on:
+      - api
+
   api:
     build:
-      context: ./backend      # <--- Вказуємо, що код бекенду та package.json у папці backend/
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: docuflow-api
+    image: docuflow-api:1.0.0
+    container_name: api
     ports:
       - "8080:8080"
     environment:
       PORT: "8080"
+      DB_HOST: "db"
+      DB_PORT: "5432"
+      DB_NAME: "docuflow"
+      DB_USER: "postgres"
+      DB_PASSWORD: "examplepassword"
       PGHOST: "db"
       PGPORT: "5432"
       PGDATABASE: "docuflow"
       PGUSER: "postgres"
       PGPASSWORD: "examplepassword"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:15-alpine
-    container_name: docuflow-db
+    container_name: db
     environment:
       POSTGRES_DB: docuflow
       POSTGRES_USER: postgres
@@ -27,6 +47,12 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d docuflow"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
 
 volumes:
   pgdata:

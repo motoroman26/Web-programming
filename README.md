@@ -133,3 +133,61 @@ npx serve web -l 5500
 - **Degraded mode** — після 3 збоїв поспіль з'являється банер «Сервер перевантажений», кнопки блокуються на 10 секунд.
 - **Перевірка** — кнопки «Повільний /health» (таймаут 1 с), «Запит з помилкою 503», «Тест подвійного кліку» та прапорець випадкових збоїв; усі спроби видно в «Журналі запитів».
 - **Практична 1** — кнопка «Load items» (`GET /items`).
+
+---
+
+## 🐳 Контейнеризація та запуск у Docker (Практична робота №6)
+
+Проєкт підтримує запуск як окремих сервісів у Docker-контейнерах, так і повну оркестрацію всього стеку (`web` + `api` + `db`) через **Docker Compose**.
+
+Детальний звіт про виконання: [docs/labs/lab_06.md](docs/labs/lab_06.md).
+
+### 1. Перевірка роботи Docker
+```bash
+docker version
+docker run hello-world
+```
+
+### 2. Запуск окремого контейнера API
+```bash
+# Збірка образу бекенду
+docker build -t docuflow-api:1.0.0 ./backend
+
+# Запуск контейнера
+docker run --name docuflow-api --rm -d -p 8080:8080 docuflow-api:1.0.0
+
+# Перевірка працездатності
+curl http://localhost:8080/health
+
+# Зупинка контейнера
+docker stop docuflow-api
+```
+
+### 3. Повний запуск системи через Docker Compose (90–100 балів)
+Однією командою піднімаються 3 сервіси:
+- `web` — фронтенд на Nginx (`http://localhost:3000`)
+- `api` — бекенд на Node.js (`http://localhost:8080`)
+- `db` — база даних PostgreSQL 15 з автоініціалізацією схеми через `backend/database/init.sql` (`localhost:5432`)
+
+```bash
+# Запуск усіх сервісів у фоновому режимі зі збіркою образів:
+docker compose up -d --build
+
+# Перевірка статусу контейнерів:
+docker compose ps
+
+# Перегляд логів:
+docker compose logs -f
+
+# Перевірка роботи API:
+curl http://localhost:8080/health
+curl http://localhost:8080/items
+curl http://localhost:8080/pages
+
+# Відкрийте фронтенд у браузері:
+http://localhost:3000
+
+# Зупинка всіх сервісів та звільнення ресурсів:
+docker compose down
+```
+
