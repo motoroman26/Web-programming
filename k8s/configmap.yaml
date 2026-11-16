@@ -1,0 +1,17 @@
+# Несекретні налаштування API. Передаються в контейнер як змінні оточення (envFrom).
+# Після зміни потрібен `kubectl rollout restart deployment/docuflow-api -n docuflow`,
+# бо змінні оточення читаються лише під час старту контейнера.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docuflow-config
+  namespace: docuflow
+data:
+  APP_ENV: "k8s"
+  NODE_ENV: "production"
+  PORT: "8080"
+  PGHOST: "docuflow-db"
+  PGPORT: "5432"
+  PGDATABASE: "docuflow"
+  PGUSER: "postgres"
+  LOG_FILE: "/tmp/logs/docuflow-api.log"

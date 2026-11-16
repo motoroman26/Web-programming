@@ -1,0 +1,65 @@
+# Бекенд DocuFlow: 2 репліки за Service типу ClusterIP.
+# initContainer виконує міграції БД перед стартом (pg_advisory_lock не дає двом подам мігрувати одночасно).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docuflow-api
+  namespace: docuflow
+  labels:
+    app: docuflow-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docuflow-api
+  template:
+    metadata:
+      labels:
+        app: docuflow-api
+    spec:
+      initContainers:
+        - name: migrate
+          image: docuflow-api:1.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["node", "migrate.js", "--seed"]
+          envFrom:
+            - configMapRef: { name: docuflow-config }
+            - secretRef: { name: docuflow-secret }
+      containers:
+        - name: api
+          image: docuflow-api:1.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["node", "index.js"]
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef: { name: docuflow-config }
+            - secretRef: { name: docuflow-secret }
+          # Liveness: процес живий? Якщо ні — kubelet перезапустить контейнер
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          # Readiness: чи є з'єднання з БД? Якщо ні — под тимчасово не отримує трафік
+          readinessProbe:
+            httpGet: { path: /ready, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docuflow-api
+  namespace: docuflow
+spec:
+  type: ClusterIP
+  selector:
+    app: docuflow-api
+  ports:
+    - port: 80
+      targetPort: 8080
