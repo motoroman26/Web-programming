@@ -168,7 +168,7 @@ jobs:
 
       # Сканування вразливостей: лише звіт, збірку не зупиняє (exit-code 0)
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
           format: table
