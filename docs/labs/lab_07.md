@@ -63,11 +63,15 @@ git push origin v1.0.0
 
 ## 5. Результати
 
-> **TODO (Макс):** після першого запуску в репозиторії вставити:
-> - посилання на успішний запуск: `https://github.com/ozzi0813/Web-programming/actions/runs/...`
-> - скріншот Job Summary (тести + покриття) → `docs/labs/img/lab07-summary.png`
-> - посилання на пакети: `https://github.com/ozzi0813?tab=packages`
-> - (за бажанням) реліз `v1.0.0`
+- Успішний запуск на `main` після злиття PR #22: https://github.com/ozzi0813/Web-programming/actions/runs/43852349064. Тести бекенду (36 с) і перевірка фронтенду (6 с), потім матриця збірки образів `api`/`web` з Trivy. Артефакти: `test-reports` (JUnit + покриття) та два `.dockerbuild`.
+- Реліз за тегом `v1.0.0`: https://github.com/ozzi0813/Web-programming/actions/runs/43853066143 → https://github.com/ozzi0813/Web-programming/releases/tag/v1.0.0 (образи `ghcr.io/ozzi0813/docuflow-api:v1.0.0`, `ghcr.io/ozzi0813/docuflow-web:v1.0.0`, автоматичні release notes).
+- Пакети: https://github.com/ozzi0813?tab=packages
+- Dependabot одразу після злиття відкрив 9 PR з оновленнями (npm, GitHub Actions, Docker), і CI на кожному з них зелений.
+- **Перший запуск PR впав** на кроці `Set up job`: `Unable to resolve action aquasecurity/trivy-action@0.28.0`, бо автори прибрали стару версію. Версію оновили до `0.35.0`, і повторний запуск зелений. Це живий приклад, навіщо фіксувати версії та тримати Dependabot.
+
+![Успішний запуск CI](img/lab07_run.png)
+
+![Реліз v1.0.0](img/lab07_release.png)
 
 ## 6. Контрольні питання
 

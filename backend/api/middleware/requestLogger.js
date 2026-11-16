@@ -17,7 +17,7 @@ function createRequestLogger({ logFile = process.env.LOG_FILE, silent = process.
     const traceId = trace.getActiveSpan()?.spanContext().traceId;
     res.on('finish', () => {
       const entry = {
-        time: new Date().toISOString(),
+        ts: new Date().toISOString(), // поле ts — так його розбирає колектор стенду (filelog → timestamp)
         level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
         service: 'docuflow-api',
         method: req.method,
