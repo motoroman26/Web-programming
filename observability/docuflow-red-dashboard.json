@@ -121,7 +121,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{job=~\".+\"} |= \"\\\"service\\\":\\\"docuflow-api\\\"\" | json | level=~\"warn|error\""
+          "expr": "{service=\"docuflow-api\"} | json level=\"attributes.level\", route=\"attributes.route\", status=\"attributes.status\", method=\"attributes.method\", ms=\"attributes.durationMs\", traceId=\"attributes.traceId\" | level=~\"warn|error\" | line_format \"{{.level}}  {{.status}}  {{.method}} {{.route}}  {{.ms}} ms  traceId={{.traceId}}\""
         }
       ]
     }

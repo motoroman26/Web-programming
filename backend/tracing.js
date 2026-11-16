@@ -22,10 +22,11 @@ if (endpoint) {
       'deployment.environment': process.env.APP_ENV || 'dev',
     }),
     traceExporter: new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
-    metricReader: new PeriodicExportingMetricReader({
+    // у нових версіях SDK параметр називається metricReaders (масив); старий metricReader ігнорується
+    metricReaders: [new PeriodicExportingMetricReader({
       exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
       exportIntervalMillis: 10_000,
-    }),
+    })],
     // Автоматично: вхідні HTTP-запити, маршрути Express, SQL-запити pg
     instrumentations: [getNodeAutoInstrumentations({
       '@opentelemetry/instrumentation-fs': { enabled: false },
