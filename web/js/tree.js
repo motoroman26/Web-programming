@@ -85,7 +85,7 @@ async function createPageFlow(parentId = null) {
     try {
         const page = await api("POST", "/pages", {
             body: { title: values.title, icon: values.icon || null, parentId },
-            idempotencyKey: crypto.randomUUID(),
+            idempotencyKey: newId(),
         });
         if (parentId) Tree.expanded.add(parentId);
         await App.reloadPages();
