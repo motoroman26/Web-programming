@@ -1,6 +1,75 @@
-# DocuFlow (Notion Clone) — Модульний моноліт
+# DocuFlow — корпоративна база знань для бізнесу
 
-Проєкт для централізованого ведення корпоративної бази знань, робочих регламентів, деревоподібних сторінок та контентних блоків.
+[![CI](https://github.com/ozzi0813/Web-programming/actions/workflows/ci.yml/badge.svg)](https://github.com/ozzi0813/Web-programming/actions/workflows/ci.yml)
+
+Курсовий проєкт з веб-програмування. Українська альтернатива Notion, заточена під компанії. Компанія реєструється й зберігає в одному місці статутні документи, регламенти, посадові інструкції, накази та оргструктуру. Доступ розмежовано за ролями.
+
+**Можливості**
+- 🏢 Реєстрація компанії, вхід (JWT + bcrypt), ролі **власник / адміністратор / редактор / глядач**.
+- 🗂️ Дерево розділів і сторінок довільної вкладеності; переміщення, кошик з відновленням.
+- ✍️ Блоковий редактор: заголовки, текст, списки, чекбокси, цитати, примітки, код, таблиці.
+- 📎 Файли-документи до кожної сторінки (PDF, Word, Excel, зображення — до 10 МБ).
+- 👔 Оргструктура: дерево відділів, посади зі штатом, працівники на посадах, посилання на посадові інструкції.
+- 🔍 Пошук по назвах, тексту, таблицях і назвах файлів.
+- 🛡️ Стійкість з лаби 5: ретраї, таймаути, `Idempotency-Key`, `X-Request-Id`, rate limiting.
+
+**Стек:** HTML5 + CSS3 + JavaScript (без фреймворків) · Node.js 20 + Express 5 · PostgreSQL 15 · Docker · GitHub Actions · Kubernetes · OpenTelemetry.
+
+**Команда:** Арсентій Кравчук — фронтенд · Роман Романюк — бекенд · Максим Озаринський — PostgreSQL, DevOps, документація (лідер).
+
+| Документ | Посилання |
+|---|---|
+| Бізнес-документ, roadmap | [docs/business_doc.md](docs/business_doc.md), [docs/roadmap.md](docs/roadmap.md) |
+| Домен (DDD) | [docs/domain/](docs/domain) |
+| Діаграми | [docs/diagrams/](docs/diagrams) |
+| API (OpenAPI) | [docs/api/openapi.yaml](docs/api/openapi.yaml) |
+| ADR | [docs/adr/](docs/adr) |
+| Звіти лаб 4–10 | [docs/labs/](docs/labs) |
+
+---
+
+## ⚡ Курсовий проєкт: швидкий старт
+
+```bash
+cd backend
+cp .env.example .env          # вкажіть пароль PostgreSQL
+npm install
+npm run migrate -- --seed     # таблиці + демо-компанія «Пекарня Колосок»
+npm start                     # API: http://localhost:8080
+```
+В іншому терміналі (з кореня репозиторію):
+```bash
+npx serve web -l 5500         # фронтенд: http://localhost:5500
+```
+
+**Демо-акаунти** (пароль `demo12345`):
+
+| Email | Роль |
+|---|---|
+| `owner@kolosok.demo` | Власник |
+| `hr@kolosok.demo` | Редактор |
+| `staff@kolosok.demo` | Глядач |
+
+Або одна команда: `docker compose up -d --build` → http://localhost:3000.
+
+### Структура
+```
+backend/
+  api/            маршрути Express (apiRouter.js — /api/..., pageRouter.js — лаби 4–5), middleware
+  service/        бізнес-логіка: Auth, Member, Knowledge, Attachment, Org, Workspace
+  domain/         сутності та правила: Member (RBAC), Block, Workspace, Attachment, OrgUnit
+  repository/     SQL-запити до PostgreSQL (лише параметризовані)
+  database/       migrations/*.sql, seeds/*.sql (запускає migrate.js)
+  test/           node:test — юніт- та інтеграційні тести
+web/
+  index.html      вхід і реєстрація компанії
+  app.html        застосунок (дерево, редактор, файли, оргструктура, працівники, пошук, кошик)
+  labs.html       демо лабораторних 1–5
+  js/, css/       модулі фронтенду та стилі
+k8s/              маніфести Kubernetes (лаба 10)
+observability/    дашборд Grafana (лаба 8)
+.github/          CI/CD і Dependabot (лаба 7)
+```
 
 ---
 
@@ -103,8 +172,10 @@ cp .env.example .env
 
 ### 2. Запуск міграцій БД (PostgreSQL)
 ```bash
-npm run migrate
+npm run migrate            # лише схема
+npm run migrate -- --seed  # схема + демо-дані
 ```
+Міграції лежать у `backend/database/migrations` і виконуються один раз кожна (облік у таблиці `schema_migrations`).
 
 ### 3. Запуск юніт- та інтеграційних тестів
 Покриває доменний шар, сервісний рівень `PageService`, ендпоінти API, а також механізми відмовостійкості (ідемпотентність, rate-limiting, кореляція, таймаути):
@@ -125,9 +196,9 @@ npm run dev
 ```bash
 npx serve web -l 5500
 ```
-Відкрийте `http://localhost:5500` (або відкрийте `web/index.html` через Live Server у VS Code).
+Відкрийте `http://localhost:5500` — сторінка входу в застосунок. Демо лабораторних 1–5 — `http://localhost:5500/labs.html`.
 
-Що є на сторінці:
+Що є на сторінці лаб (`labs.html`):
 - **Сторінки (Практична 4)** — створення, список, перейменування (`PUT`) та видалення (`DELETE`) сторінок через `/pages`.
 - **Стійкість (Практична 5)** — файл `web/http.js`: таймаут через `AbortController`, ретраї на 5xx і мережеві збої з експоненційним backoff та джитером, очікування за `Retry-After` при 429, `X-Request-Id` у кожному запиті, `Idempotency-Key` для `POST /pages`.
 - **Degraded mode** — після 3 збоїв поспіль з'являється банер «Сервер перевантажений», кнопки блокуються на 10 секунд.
@@ -167,7 +238,7 @@ docker stop docuflow-api
 Однією командою піднімаються 3 сервіси:
 - `web` — фронтенд на Nginx (`http://localhost:3000`)
 - `api` — бекенд на Node.js (`http://localhost:8080`)
-- `db` — база даних PostgreSQL 15 з автоініціалізацією схеми через `backend/database/init.sql` (`localhost:5432`)
+- `db` — база даних PostgreSQL 15 (`localhost:5432`); схему й демо-дані створює контейнер `api` командою `node migrate.js --seed` перед стартом
 
 ```bash
 # Запуск усіх сервісів у фоновому режимі зі збіркою образів:
@@ -191,3 +262,35 @@ http://localhost:3000
 docker compose down
 ```
 
+---
+
+## 🔁 CI/CD (Практична робота №7)
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+- **test** — тести бекенду з PostgreSQL у CI, JUnit і LCOV як артефакти, підсумок у Job Summary;
+- **lint** — перевірка JS фронтенду;
+- **docker** — образи `api` і `web` → GHCR (`ghcr.io/ozzi0813/docuflow-api`, `ghcr.io/ozzi0813/docuflow-web`), теги `sha-<commit>`, `vX.Y.Z`, `latest`;
+- **release** — GitHub Release з авто-нотатками на тег `v*`.
+
+**Delivery:** GHCR (варіант A). Реліз: `git tag v1.0.0 && git push origin v1.0.0`.
+
+**Style points:** семантичне тегування; мінімальні permissions і concurrency з cancel-in-progress; Job Summary; Dependabot; Trivy scan (exit-code 0); автоматичні реліз-нотатки. Детально — [docs/labs/lab_07.md](docs/labs/lab_07.md).
+
+## 📈 Observability (Практична робота №8)
+
+```bash
+# бекенд з OpenTelemetry (трейси + метрики → OTLP-колектор стенду observability-demo)
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 npm run start:otel
+```
+Дашборд Grafana: [observability/docuflow-red-dashboard.json](observability/docuflow-red-dashboard.json). Алерти та звіт — [docs/labs/lab_08.md](docs/labs/lab_08.md).
+
+## ☸️ Kubernetes (Практичні роботи №9–10)
+
+```bash
+minikube start --driver=docker && minikube addons enable ingress
+minikube image build -t docuflow-api:1.0.0 ./backend
+minikube image build -t docuflow-web:1.0.0 ./web
+kubectl apply -k k8s/
+kubectl get pods,svc,ingress -n docuflow
+```
+Схема — [docs/labs/lab_09.md](docs/labs/lab_09.md), практична частина і контрольні запитання — [docs/labs/lab_10.md](docs/labs/lab_10.md).
