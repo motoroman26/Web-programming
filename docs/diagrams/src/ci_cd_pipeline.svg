@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="460" viewBox="0 0 1240 460" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#37352f"/></marker>
+    <style>
+      .h{font-size:15px;font-weight:700;fill:#1f2937}
+      .s{font-size:12.5px;fill:#374151}
+      .n{font-size:12px;fill:#6b7280;font-style:italic}
+      .ar{stroke:#37352f;stroke-width:1.7;fill:none;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect width="1240" height="460" fill="#fff"/>
+  <text x="620" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1f2937">CI/CD pipeline (.github/workflows/ci.yml)</text>
+
+  <rect x="20" y="150" width="160" height="110" rx="12" fill="#f8fafc" stroke="#64748b"/>
+  <text x="100" y="178" text-anchor="middle" class="h">Тригер</text>
+  <text x="100" y="200" text-anchor="middle" class="s">pull_request → main</text>
+  <text x="100" y="218" text-anchor="middle" class="s">push → main</text>
+  <text x="100" y="236" text-anchor="middle" class="s">тег v*.*.*</text>
+  <text x="100" y="252" text-anchor="middle" class="s">workflow_dispatch</text>
+
+  <rect x="230" y="70" width="290" height="170" rx="12" fill="#f0fdf4" stroke="#2e8b57" stroke-width="1.8"/>
+  <text x="375" y="96" text-anchor="middle" class="h">test — Тести бекенду</text>
+  <text x="246" y="120" class="s">service: postgres:15-alpine</text>
+  <text x="246" y="140" class="s">setup-node 22 + кеш npm</text>
+  <text x="246" y="160" class="s">npm ci → npm run migrate</text>
+  <text x="246" y="180" class="s">node --test: spec + junit + lcov</text>
+  <text x="246" y="200" class="s">RUN_DB_TESTS=1 (інтеграційні)</text>
+  <text x="246" y="222" class="n">→ артефакт test-reports, Job Summary</text>
+
+  <rect x="230" y="270" width="290" height="80" rx="12" fill="#f0fdf4" stroke="#2e8b57" stroke-width="1.8"/>
+  <text x="375" y="296" text-anchor="middle" class="h">lint — Перевірка фронтенду</text>
+  <text x="246" y="320" class="s">node --check web/*.js web/js/*.js</text>
+
+  <path d="M180,190 H226" class="ar"/><path d="M180,220 C205,220 200,310 226,310" class="ar"/>
+
+  <rect x="580" y="110" width="330" height="240" rx="12" fill="#eef4ff" stroke="#2f6fde" stroke-width="1.8"/>
+  <text x="745" y="136" text-anchor="middle" class="h">docker — matrix: api, web</text>
+  <text x="596" y="162" class="s">needs: test, lint · packages: write</text>
+  <text x="596" y="184" class="s">setup-buildx · кеш шарів type=gha</text>
+  <text x="596" y="206" class="s">metadata: sha-&lt;commit&gt;, vX.Y.Z, X.Y, latest</text>
+  <text x="596" y="228" class="s">PR: лише збірка (load)</text>
+  <text x="596" y="250" class="s">main / тег: login GHCR → push</text>
+  <text x="596" y="272" class="s">Trivy scan (CRITICAL, HIGH; exit-code 0)</text>
+  <text x="596" y="294" class="s">Job Summary з тегами образів</text>
+  <text x="596" y="326" class="n">ghcr.io/ozzi0813/docuflow-api · docuflow-web</text>
+  <path d="M520,155 H576" class="ar"/><path d="M520,310 H576" class="ar"/>
+
+  <rect x="970" y="110" width="250" height="110" rx="12" fill="#faf5ff" stroke="#8250df" stroke-width="1.8"/>
+  <text x="1095" y="136" text-anchor="middle" class="h">release</text>
+  <text x="986" y="160" class="s">лише для тегів v*</text>
+  <text x="986" y="182" class="s">GitHub Release +</text>
+  <text x="986" y="204" class="s">автоматичні реліз-нотатки</text>
+  <path d="M910,165 H966" class="ar"/>
+
+  <rect x="970" y="250" width="250" height="100" rx="12" fill="#f8fafc" stroke="#64748b" stroke-dasharray="6 4"/>
+  <text x="1095" y="276" text-anchor="middle" class="h">Розгортання</text>
+  <text x="986" y="300" class="s">docker compose up / kubectl</text>
+  <text x="986" y="320" class="s">apply -k k8s/ (образи з GHCR)</text>
+  <path d="M910,300 H966" class="ar" stroke-dasharray="5 4"/>
+
+  <rect x="20" y="380" width="1200" height="64" rx="10" fill="#fffbea" stroke="#c99a06"/>
+  <text x="36" y="404" class="h">Політики:</text>
+  <text x="120" y="404" class="s">permissions: contents: read за замовчуванням · concurrency з cancel-in-progress · timeout-minutes у кожному job</text>
+  <text x="120" y="426" class="s">Dependabot: npm, GitHub Actions, Docker · Branch protection: required checks «Тести бекенду», «Перевірка фронтенду»</text>
+</svg>

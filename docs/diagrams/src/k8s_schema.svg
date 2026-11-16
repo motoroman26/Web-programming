@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#37352f"/></marker>
+    <style>
+      .h{font-size:15px;font-weight:700;fill:#1f2937}
+      .s{font-size:12.5px;fill:#374151}
+      .n{font-size:12px;fill:#6b7280;font-style:italic}
+      .ar{stroke:#37352f;stroke-width:1.7;fill:none;marker-end:url(#a)}
+      .pod{fill:#fff;stroke:#326ce5;stroke-width:1.5}
+    </style>
+  </defs>
+  <rect width="1280" height="820" fill="#fff"/>
+  <text x="640" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1f2937">DocuFlow у Kubernetes: від користувача до пода</text>
+
+  <!-- external chain -->
+  <rect x="30" y="80" width="150" height="70" rx="10" fill="#eef4ff" stroke="#2f6fde"/><text x="105" y="110" text-anchor="middle" class="h">Користувач</text><text x="105" y="130" text-anchor="middle" class="s">браузер</text>
+  <rect x="30" y="200" width="150" height="70" rx="10" fill="#f8fafc" stroke="#64748b"/><text x="105" y="228" text-anchor="middle" class="h">DNS</text><text x="105" y="248" text-anchor="middle" class="s">docuflow.example.com</text>
+  <rect x="30" y="320" width="150" height="70" rx="10" fill="#f8fafc" stroke="#64748b"/><text x="105" y="348" text-anchor="middle" class="h">Load Balancer</text><text x="105" y="368" text-anchor="middle" class="s">хмарний / tunnel</text>
+  <path d="M105,150 V196" class="ar"/><path d="M105,270 V316" class="ar"/><path d="M180,355 H263" class="ar"/>
+
+  <!-- cluster -->
+  <rect x="240" y="60" width="1010" height="560" rx="18" fill="#f5f8ff" stroke="#326ce5" stroke-width="2"/>
+  <text x="260" y="88" class="h" fill="#326ce5">Kubernetes cluster (ноди: node-1, node-2)</text>
+  <rect x="265" y="300" width="160" height="110" rx="10" fill="#fff" stroke="#326ce5" stroke-width="1.8"/>
+  <text x="345" y="328" text-anchor="middle" class="h">Ingress</text>
+  <text x="345" y="348" text-anchor="middle" class="s">nginx controller</text>
+  <text x="345" y="368" text-anchor="middle" class="n">Host → Service</text>
+  <text x="345" y="388" text-anchor="middle" class="n">body ≤ 11m</text>
+
+  <rect x="455" y="105" width="775" height="495" rx="14" fill="#fff" stroke="#93a8d8" stroke-dasharray="7 5"/>
+  <text x="475" y="130" class="h">namespace: docuflow</text>
+
+  <!-- web -->
+  <rect x="475" y="150" width="170" height="70" rx="10" fill="#e8f0fe" stroke="#326ce5"/><text x="560" y="178" text-anchor="middle" class="h">Service</text><text x="560" y="198" text-anchor="middle" class="s">docuflow-web · ClusterIP:80</text>
+  <rect x="690" y="140" width="520" height="92" rx="10" fill="#fbfdff" stroke="#93a8d8"/>
+  <text x="702" y="160" class="s" font-weight="700">Deployment docuflow-web · replicas: 2</text>
+  <rect x="705" y="170" width="230" height="52" rx="8" class="pod"/><text x="820" y="192" text-anchor="middle" class="s">Pod · nginx</text><text x="820" y="210" text-anchor="middle" class="n">docuflow-web:1.0.0 + config.js</text>
+  <rect x="960" y="170" width="230" height="52" rx="8" class="pod"/><text x="1075" y="192" text-anchor="middle" class="s">Pod · nginx</text><text x="1075" y="210" text-anchor="middle" class="n">docuflow-web:1.0.0 + config.js</text>
+  <path d="M645,185 H700" class="ar"/>
+
+  <!-- api -->
+  <rect x="475" y="290" width="170" height="70" rx="10" fill="#e8f0fe" stroke="#326ce5"/><text x="560" y="318" text-anchor="middle" class="h">Service</text><text x="560" y="338" text-anchor="middle" class="s">docuflow-api · ClusterIP:80</text>
+  <rect x="690" y="262" width="520" height="130" rx="10" fill="#fbfdff" stroke="#93a8d8"/>
+  <text x="702" y="282" class="s" font-weight="700">Deployment docuflow-api · replicas: 2</text>
+  <rect x="705" y="292" width="230" height="88" rx="8" class="pod"/><text x="820" y="312" text-anchor="middle" class="s">Pod · node index.js :8080</text><text x="820" y="330" text-anchor="middle" class="n">init: migrate.js --seed</text><text x="820" y="348" text-anchor="middle" class="n">liveness /health</text><text x="820" y="366" text-anchor="middle" class="n">readiness /ready</text>
+  <rect x="960" y="292" width="230" height="88" rx="8" class="pod"/><text x="1075" y="312" text-anchor="middle" class="s">Pod · node index.js :8080</text><text x="1075" y="330" text-anchor="middle" class="n">init: migrate.js --seed</text><text x="1075" y="348" text-anchor="middle" class="n">liveness /health</text><text x="1075" y="366" text-anchor="middle" class="n">readiness /ready</text>
+  <path d="M645,325 H700" class="ar"/>
+
+  <!-- ingress arrows -->
+  <path d="M425,330 C445,330 440,185 470,185" class="ar"/><text x="378" y="240" class="n">docuflow.local</text>
+  <path d="M425,345 C445,345 450,325 470,325" class="ar"/><text x="360" y="440" class="n">api.docuflow.local</text>
+
+  <!-- config -->
+  <rect x="475" y="420" width="170" height="80" rx="10" fill="#fffbea" stroke="#c99a06"/><text x="560" y="446" text-anchor="middle" class="h">ConfigMap</text><text x="560" y="466" text-anchor="middle" class="s">docuflow-config</text><text x="560" y="484" text-anchor="middle" class="s">docuflow-web-config</text>
+  <rect x="475" y="512" width="170" height="70" rx="10" fill="#fdecec" stroke="#d44c47"/><text x="560" y="540" text-anchor="middle" class="h">Secret</text><text x="560" y="560" text-anchor="middle" class="s">PGPASSWORD, JWT_SECRET</text>
+  <path d="M645,460 C680,460 690,400 760,384" class="ar" stroke-dasharray="5 4"/>
+  <text x="652" y="420" class="n">envFrom</text>
+
+  <!-- db -->
+  <rect x="690" y="420" width="250" height="70" rx="10" fill="#e8f0fe" stroke="#326ce5"/><text x="815" y="448" text-anchor="middle" class="h">Service docuflow-db</text><text x="815" y="468" text-anchor="middle" class="s">ClusterIP:5432</text>
+  <rect x="690" y="505" width="520" height="80" rx="10" fill="#fff7ed" stroke="#d97706"/>
+  <text x="1198" y="527" text-anchor="end" class="s" font-weight="700">StatefulSet docuflow-db · replicas: 1</text>
+  <rect x="705" y="535" width="230" height="42" rx="8" fill="#fff" stroke="#d97706"/><text x="820" y="561" text-anchor="middle" class="s">Pod · postgres:15-alpine</text>
+  <rect x="960" y="535" width="230" height="42" rx="8" fill="#fff" stroke="#d97706"/><text x="1075" y="561" text-anchor="middle" class="s">PVC data · 1 Gi</text>
+  <path d="M935,556 H956" class="ar"/>
+  <path d="M1075,380 V430 H945" class="ar"/><text x="1085" y="414" class="n">SQL</text>
+  <path d="M815,490 V530" class="ar"/>
+
+  <!-- CI/CD -->
+  <rect x="240" y="650" width="230" height="140" rx="12" fill="#f8fafc" stroke="#64748b"/>
+  <text x="355" y="676" text-anchor="middle" class="h">git (GitHub)</text>
+  <text x="355" y="698" text-anchor="middle" class="s">github.com/ozzi0813/</text>
+  <text x="355" y="716" text-anchor="middle" class="s">Web-programming</text>
+  <text x="355" y="746" text-anchor="middle" class="n">git push / тег v1.0.0</text>
+  <rect x="540" y="650" width="300" height="140" rx="12" fill="#f8fafc" stroke="#64748b"/>
+  <text x="690" y="676" text-anchor="middle" class="h">CI/CD — GitHub Actions</text>
+  <text x="690" y="700" text-anchor="middle" class="s">тести з PostgreSQL → lint</text>
+  <text x="690" y="720" text-anchor="middle" class="s">docker build api, web → Trivy</text>
+  <text x="690" y="740" text-anchor="middle" class="s">docker push (sha-…, vX.Y.Z)</text>
+  <rect x="910" y="650" width="340" height="140" rx="12" fill="#f8fafc" stroke="#64748b"/>
+  <text x="1080" y="676" text-anchor="middle" class="h">Container registry — GHCR</text>
+  <text x="1080" y="700" text-anchor="middle" class="s">ghcr.io/ozzi0813/docuflow-api:1.0.0</text>
+  <text x="1080" y="720" text-anchor="middle" class="s">ghcr.io/ozzi0813/docuflow-web:1.0.0</text>
+  <path d="M470,720 H536" class="ar"/><path d="M840,720 H906" class="ar"/>
+  <path d="M1220,650 V600" class="ar"/><text x="1210" y="640" text-anchor="end" class="n">pull образу під час старту пода</text>
+</svg>
