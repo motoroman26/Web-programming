@@ -1,0 +1,206 @@
+# CI/CD DocuFlow (практична 7)
+#  • test    — тести бекенду з реальною PostgreSQL, JUnit-звіт і покриття як артефакти, підсумок у Job Summary
+#  • lint    — перевірка синтаксису JS фронтенду
+#  • docker  — збірка образів api і web; на main і тегах v* — публікація в GHCR (теги sha-<commit>, vX.Y.Z, latest)
+#  • release — на тег v* — GitHub Release з автоматичними реліз-нотами
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Мінімальні права за замовчуванням; jobs, яким потрібно більше, просять явно
+permissions:
+  contents: read
+
+# Новий запуск на тій самій гілці скасовує застарілий
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Тести бекенду
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: docuflow_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGDATABASE: docuflow_test
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      JWT_SECRET: ci-test-secret
+      RUN_DB_TESTS: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Встановлення залежностей
+        run: npm ci
+
+      - name: Міграції БД
+        run: npm run migrate
+
+      - name: Тести (spec у лог, JUnit і покриття у файли)
+        run: >
+          node --test --experimental-test-coverage
+          --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=junit --test-reporter-destination=junit.xml
+          --test-reporter=lcov --test-reporter-destination=lcov.info
+          "test/**/*.test.js"
+
+      - name: Підсумок у Job Summary
+        if: always()
+        run: |
+          tests=$(grep -c "<testcase" junit.xml || true)
+          failures=$(grep -c "<failure" junit.xml || true)
+          lines=$(awk -F: '/^LF:/{t+=$2} /^LH:/{h+=$2} END {if (t) printf "%.1f", h*100/t; else print "n/a"}' lcov.info)
+          {
+            echo "## 🧪 Тести бекенду"
+            echo "| Тестів | Помилок | Покриття рядків |"
+            echo "|---|---|---|"
+            echo "| ${tests} | ${failures} | ${lines}% |"
+            echo ""
+            echo "Артефакт **test-reports** містить junit.xml і lcov.info."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Артефакти звітів
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            backend/junit.xml
+            backend/lcov.info
+          retention-days: 14
+
+  lint:
+    name: Перевірка фронтенду
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Синтаксис усіх JS-файлів
+        run: for f in web/*.js web/js/*.js; do node --check "$f"; done
+
+  docker:
+    name: Образ ${{ matrix.service }}
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - service: api
+            context: backend
+          - service: web
+            context: web
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ім'я образу в GHCR має бути в нижньому регістрі
+      - name: Ім'я образу
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/docuflow-${{ matrix.service }}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Вхід у GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Теги: sha-<commit> завжди; vX.Y.Z і X.Y для релізів; latest для main
+      - name: Теги образу
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,prefix=sha-
+            type=semver,pattern=v{{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Збірка (і публікація поза PR)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      # Сканування вразливостей: лише звіт, збірку не зупиняє (exit-code 0)
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Підсумок
+        run: |
+          {
+            echo "## 🐳 docuflow-${{ matrix.service }}"
+            echo "Опубліковано: ${{ github.event_name != 'pull_request' }}"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Реліз з автоматичними нотатками
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            Образи цього релізу:
+            - `ghcr.io/${{ github.repository_owner }}/docuflow-api:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository_owner }}/docuflow-web:${{ github.ref_name }}`

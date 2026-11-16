@@ -1,0 +1,64 @@
+# Фронтенд DocuFlow (Nginx зі статикою). Адреса API підміняється через ConfigMap з файлом config.js.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docuflow-web-config
+  namespace: docuflow
+data:
+  config.js: |
+    // Адреса API в кластері (Ingress, хост api.docuflow.local)
+    window.API_BASE = "http://api.docuflow.local";
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docuflow-web
+  namespace: docuflow
+  labels:
+    app: docuflow-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docuflow-web
+  template:
+    metadata:
+      labels:
+        app: docuflow-web
+    spec:
+      containers:
+        - name: web
+          image: docuflow-web:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet: { path: /, port: 80 }
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/config.js
+              subPath: config.js
+      volumes:
+        - name: config
+          configMap:
+            name: docuflow-web-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docuflow-web
+  namespace: docuflow
+spec:
+  type: ClusterIP
+  selector:
+    app: docuflow-web
+  ports:
+    - port: 80
+      targetPort: 80

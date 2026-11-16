@@ -242,3 +242,37 @@ Workspace 1 ─────── N WorkspaceMember N ─────── 1 Us
    │
    └─────── 1 ─────── N Attachment
 ```
+
+---
+
+## 4. Курсовий проєкт: Контекст 6 — Organization Structure (Оргструктура)
+
+Додано в курсовому проєкті, щоб компанія могла описати свою структуру, посади та прив'язати до них посадові інструкції.
+
+#### `Department` (Відділ)
+* **Атрибути:** `id`, `workspaceId`, `parentId` (вкладений відділ або `null`), `name` (2–150 символів), `description`, `position` (порядок).
+* **Інваріанти:**
+  * відділ належить рівно одній компанії;
+  * відділ не може бути вкладений сам у себе чи у власний підвідділ (перевірка циклів `wouldCreateCycle`);
+  * видалення відділу каскадно видаляє підвідділи та посади.
+
+#### `Position` (Посада)
+* **Атрибути:** `id`, `workspaceId`, `departmentId`, `title` (2–150), `responsibilities`, `headcount` (1–1000 штатних одиниць), `instructionPageId` (сторінка з посадовою інструкцією або `null`).
+* **Інваріанти:**
+  * посада завжди належить існуючому відділу тієї ж компанії;
+  * якщо сторінку інструкції видалено назавжди, посилання обнуляється (`ON DELETE SET NULL`).
+
+#### Зміни в інших контекстах
+* `WorkspaceMember` отримав поле `positionId` — посаду працівника.
+* `Page` отримала `workspaceId`, `position`, `createdBy/updatedBy`, `createdAt/updatedAt`, `archivedAt` (кошик).
+* `Block.type` обмежено переліком: `h1, h2, h3, paragraph, bullet, numbered, todo, quote, callout, code, divider, table`. Властивості блоку — у `data` (JSONB): `checked` для todo, `rows` для таблиці.
+* `Attachment` зберігається в PostgreSQL (`BYTEA`, ≤ 10 МБ), див. [ADR 0006](../adr/0006-documents-storage.md).
+
+```
+Workspace 1 ── N Department (parent_id ── N Department)
+                     │
+                     └── 1 ── N Position ── 0..1 Page (посадова інструкція)
+                                  │
+WorkspaceMember N ── 0..1 ────────┘ (посада працівника)
+```
+
