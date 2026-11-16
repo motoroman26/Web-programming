@@ -8,6 +8,17 @@ const log = (text) => (window.onHttpLog || (() => {}))(text);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// UUID для X-Request-Id та Idempotency-Key. crypto.randomUUID є лише на https і localhost,
+// а в Kubernetes сайт відкривається як http://docuflow.local — тоді збираємо UUID v4 вручну
+function newId() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 // Експоненційна затримка з джитером: 300, 600, 1200 ... + випадкові 0-99 мс
 const backoff = (baseDelayMs, attempt) =>
     baseDelayMs * 2 ** attempt + Math.floor(Math.random() * 100);
@@ -24,7 +35,7 @@ async function fetchWithResilience(path, options = {}) {
     } = options;
 
     // Один X-Request-Id на всі спроби, щоб їх можна було знайти в логах сервера
-    const requestId = crypto.randomUUID();
+    const requestId = newId();
 
     for (let attempt = 0; ; attempt++) {
         const headers = { "X-Request-Id": requestId, ...extraHeaders };
@@ -94,7 +105,7 @@ async function getOrReuseKey(payload) {
     const storageKey = "idem:" + (await payloadHash(payload));
     const existing = localStorage.getItem(storageKey);
     if (existing) return existing;
-    const fresh = crypto.randomUUID();
+    const fresh = newId();
     localStorage.setItem(storageKey, fresh);
     return fresh;
 }

@@ -1,6 +1,6 @@
 # Лабораторна робота №10: Kubernetes, практична частина (REPORT)
 
-Рівні 60–90 виконуються в форку навчального репозиторію [`vivalafit/k8s-demo`](https://github.com/vivalafit/k8s-demo) за інструкцією практикуму. Тут описано **рівень 100**: міграцію власного проєкту DocuFlow у Kubernetes, а також відповіді на контрольні запитання.
+Рівні 60–90 виконано у форку навчального репозиторію [`vivalafit/k8s-demo`](https://github.com/vivalafit/k8s-demo), звіт із виводами — у `LAB10_REPORT.md` цього форку (посилання: **<вставити посилання на форк>**). Тут описано **рівень 100**: міграцію власного проєкту DocuFlow у Kubernetes, а також відповіді на контрольні запитання.
 
 ---
 
@@ -68,7 +68,81 @@ kubectl get events -n docuflow --sort-by=.metadata.creationTimestamp
 kubectl describe ingress docuflow-ingress -n docuflow
 ```
 
-> **TODO (Макс):** вставити реальні виводи `kubectl get deployment,rs,pods,svc -n docuflow`, `curl .../ready` та скріншот застосунку за адресою `http://docuflow.local`.
+### Результати запуску (Minikube v1.39, Kubernetes v1.37, 16.11.2026)
+
+```text
+$ kubectl get deployment,rs,pods,svc,ingress -n docuflow
+NAME                           READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/docuflow-api   2/2     2            2           2m
+deployment.apps/docuflow-web   2/2     2            2           2m
+
+NAME                                      DESIRED   CURRENT   READY   AGE
+replicaset.apps/docuflow-api-6bcd79d9fb   2         2         2       2m
+replicaset.apps/docuflow-web-7574b78b54   2         2         2       2m
+
+NAME                                READY   STATUS    RESTARTS   AGE
+pod/docuflow-api-6bcd79d9fb-4pk45   1/1     Running   0          2m
+pod/docuflow-api-6bcd79d9fb-mf8jc   1/1     Running   0          2m
+pod/docuflow-db-0                   1/1     Running   0          2m
+pod/docuflow-web-7574b78b54-7dgmz   1/1     Running   0          2m
+pod/docuflow-web-7574b78b54-gnznn   1/1     Running   0          2m
+
+NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/docuflow-api   ClusterIP   10.111.8.108    <none>        80/TCP     2m
+service/docuflow-db    ClusterIP   10.99.149.4     <none>        5432/TCP   2m
+service/docuflow-web   ClusterIP   10.107.255.31   <none>        80/TCP     2m
+
+NAME                                         CLASS   HOSTS                               ADDRESS        PORTS
+ingress.networking.k8s.io/docuflow-ingress   nginx   docuflow.local,api.docuflow.local   192.168.49.2   80
+
+$ kubectl get pvc -n docuflow
+NAME                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+data-docuflow-db-0   Bound    pvc-c9de8007-2960-4aff-95b7-3f8f2ee9424d   1Gi        RWO            standard
+
+$ curl http://api.docuflow.local/ready            # через Ingress + minikube tunnel
+{"status":"ready"}
+
+$ curl http://docuflow.local/config.js            # config.js з ConfigMap docuflow-web-config
+window.API_BASE = "http://api.docuflow.local";
+
+$ kubectl logs -n docuflow deploy/docuflow-api -c migrate --tail=3
+✔ міграція 0006_search.sql
+✔ сид 0001_demo_company.sql
+Міграція успішно завершена!
+```
+
+**Що спостерігали під час старту.** Поки PostgreSQL піднімався (~45 с), initContainer `migrate` кілька разів завершувався з помилкою (`Init:Error` → `Init:CrashLoopBackOff`). Kubernetes перезапускав його сам, і щойно `docuflow-db-0` став `Ready`, міграції пройшли, а поди API перейшли в `Running 1/1`. Обидві репліки мігрували одночасно, але `pg_advisory_lock` пропустив їх по черзі.
+
+**ConfigMap:**
+```text
+$ kubectl exec -n docuflow deploy/docuflow-api -- printenv APP_ENV
+k8s
+$ kubectl patch configmap docuflow-config -n docuflow --type merge -p '{"data":{"APP_ENV":"k8s-prod"}}'
+$ kubectl exec -n docuflow deploy/docuflow-api -- printenv APP_ENV
+k8s                       # env читається лише при створенні контейнера
+$ kubectl rollout restart deployment docuflow-api -n docuflow
+$ kubectl exec -n docuflow deploy/docuflow-api -- printenv APP_ENV
+k8s-prod
+```
+
+**Самовідновлення:**
+```text
+$ kubectl delete pod docuflow-api-6bcd79d9fb-4pk45 -n docuflow --wait=false
+$ kubectl get pods -n docuflow
+docuflow-api-6bcd79d9fb-4pk45   1/1     Terminating   0          4m11s
+docuflow-api-6bcd79d9fb-mf8jc   1/1     Running       0          4m11s
+docuflow-api-6bcd79d9fb-n9q42   0/1     Running       0          2s      # новий под, ще не пройшов readiness
+...
+docuflow-api-6bcd79d9fb-n9q42   1/1     Running       0          28s
+```
+
+**Застосунок за адресою http://docuflow.local** (вхід owner@kolosok.demo):
+
+![DocuFlow у Minikube](img/lab10_docuflow_local.png)
+
+**Що виправили під час запуску:**
+- `backend/.dockerignore` і `web/.dockerignore` містили рядок `Dockerfile`. `docker build` це ігнорує, а `minikube image build` передає контекст уже без Dockerfile і падає з `open Dockerfile: no such file or directory`. Рядок прибрали.
+- `crypto.randomUUID()` (X-Request-Id та Idempotency-Key з лаби 5) браузер дає лише в secure context (https або localhost). На `http://docuflow.local` функції немає, і вхід падав з помилкою «crypto.randomUUID is not a function». У `web/http.js` додано `newId()` із запасним UUID v4 через `crypto.getRandomValues`.
 
 ## 3. Відмінності від k8s-demo
 
